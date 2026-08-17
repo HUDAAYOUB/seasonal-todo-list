@@ -5,7 +5,7 @@ function App() {
   const [task, setTask] = useState("");
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState("default");
+  const [sortBy, setSortBy] = useState("priority");
   const [editingId, setEditingId] = useState(null);
   const [editingText, setEditingText] = useState("");
 
@@ -142,25 +142,49 @@ function App() {
     low: 1,
   };
 
+  const priorityLabels = {
+    high: "🔴 High",
+    medium: "🟡 Medium",
+    low: "🟢 Low",
+  };
+
+  function compareDueDates(a, b) {
+    if (!a.dueDate && !b.dueDate) {
+      return 0;
+    }
+
+    if (!a.dueDate) {
+      return 1;
+    }
+
+    if (!b.dueDate) {
+      return -1;
+    }
+
+    return a.dueDate.localeCompare(b.dueDate);
+  }
+
   const sortedTasks = [...filteredTasks].sort((a, b) => {
     if (sortBy === "priority") {
-      return priorityOrder[b.priority] - priorityOrder[a.priority];
+      // Keep completed tasks below active tasks.
+      if (a.completed !== b.completed) {
+        return a.completed ? 1 : -1;
+      }
+
+      // High first, then Medium, then Low.
+      const priorityDifference =
+        priorityOrder[b.priority] - priorityOrder[a.priority];
+
+      if (priorityDifference !== 0) {
+        return priorityDifference;
+      }
+
+      // Within the same priority, show the nearest date first.
+      return compareDueDates(a, b);
     }
 
     if (sortBy === "dueDate") {
-      if (!a.dueDate && !b.dueDate) {
-        return 0;
-      }
-
-      if (!a.dueDate) {
-        return 1;
-      }
-
-      if (!b.dueDate) {
-        return -1;
-      }
-
-      return a.dueDate.localeCompare(b.dueDate);
+      return compareDueDates(a, b);
     }
 
     if (sortBy === "alphabetical") {
@@ -295,7 +319,7 @@ function App() {
             onChange={(event) => setSortBy(event.target.value)}
           >
             <option value="default">Default</option>
-            <option value="priority">Priority</option>
+            <option value="priority">Priority + Nearest Date</option>
             <option value="dueDate">Due Date</option>
             <option value="alphabetical">A-Z</option>
           </select>
@@ -352,7 +376,7 @@ function App() {
                   </span>
 
                   <span className={`priority-badge ${item.priority}`}>
-                    {item.priority}
+                    {priorityLabels[item.priority] || "🟡 Medium"}
                   </span>
 
                   {item.dueDate && (
